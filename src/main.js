@@ -9,13 +9,18 @@ class View extends Component {
     super(props)
     this.state = {
       input: '',
+      title: '',
       graph: '',
       output: '',
       log: '',
+      error: '',
       graphList: [],
     }
   }
   componentWillMount () {
+    this.fetch()
+  }
+  fetch () {
     axios.get(url+'/api/graph/list').then(res=>{
       if (res.status!=200) {
         return console.log(res.status)
@@ -35,6 +40,11 @@ class View extends Component {
       input: e.target.value
     })
   }
+  changeTitle (e) {
+    this.setState({
+      title: e.target.value
+    })
+  }
   changeGraph (e) {
     this.setState({
       graph: e.target.value
@@ -43,18 +53,86 @@ class View extends Component {
   selectGraph (index) {
     let graph = this.state.graphList[index]
     this.setState({
-      graph: JSON.stringify(graph.graph, null, 2)
+      title: graph.title,
+      graph: JSON.stringify(graph.graph, null, 2),
+    })
+  }
+  saveGraph () {
+    const { graph, title } = this.state
+    if (!title) {
+      return
+    }
+    let graphData
+    try {
+      graphData = JSON.parse(graph)
+    } catch (e) {
+      console.log(e)
+    }
+    if (!graphData) {
+      return
+    }
+    axios.post(url+'/api/graph/add',{
+      title: title,
+      graph: graphData
+    }).then(res=>{
+      if (res.status!=200) {
+        return console.log(res.status)
+      }
+      if (!res.data.success) {
+        return console.log(res.data.message)
+      }
+      this.setState({
+        title: '',
+        graph: ''
+      })
+      this.fetch()
+    }).catch(err=>{
+      console.log(err)
+    })
+  }
+  runTest () {
+    const { graph, input } = this.state
+    if (!graph || !input) {
+      return this.setState({
+        error: '输入和图必须设置'
+      })
+    }
+    axios.post(url+'/api/graph/test',{
+      input,
+      graph
+    }).then(res=>{
+      if (res.status!=200) {
+        return console.log(res.status)
+      }
+      if (!res.data.success) {
+        return console.log(res.data.message)
+      }
+      this.setState({
+        error: '',
+        output: JSON.stringify(res.data.data.output),
+        log: JSON.stringify(res.data.data.log)
+      })
+    }).catch(err=>{
+      console.log(err)
     })
   }
   render () {
     const {
       input,
+      title,
       graph,
       output,
       log,
       graphList,
+      error,
     } = this.state
     return <div className="main">
+      {
+        error ? 
+        <div className="error">
+          {error}
+        </div> : ''
+      }
       <div className="left">
         <div className="graphList">
           <label>
@@ -85,9 +163,17 @@ class View extends Component {
           />
         </p>
         <p>
+          <label>Title: </label>
+          <textarea 
+            style={{height:50}}
+            value={title}
+            onChange={this.changeTitle.bind(this)}
+          />
+        </p>
+        <p>
           <label>Graph: </label>
           <textarea 
-            style={{height:550}}
+            style={{height:440}}
             value={graph}
             onChange={this.changeGraph.bind(this)}
           />
@@ -96,10 +182,14 @@ class View extends Component {
             style={{
               marginRight: 10
             }}
+            onClick={this.runTest.bind(this)}
           >
             Run Test
           </button>
-          <button type="button">
+          <button 
+            type="button"
+            onClick={this.saveGraph.bind(this)}
+          >
             Save Graph
           </button>
         </p>
