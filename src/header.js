@@ -8,7 +8,10 @@ class View extends Component {
   }
   render () {
     return <div className="header">
-      <Menu />
+      <div className="logo">
+        <span>Graph</span> Test Dashboard
+      </div>
+      {/* <Menu /> */}
     </div>
   }
 }
